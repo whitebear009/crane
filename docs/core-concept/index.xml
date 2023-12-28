@@ -21,7 +21,7 @@
 &lt;li>Adjust application requests to reduce resource locking: adjust application specifications based on the weekly peak resource usage to reduce Request to the weekly peak line. &lt;a href="/docs/tutorials/recommendation/resource-recommendation">Resource recommendation&lt;/a> and &lt;a href="/docs/tutorials/recommendation/replicas-recommendation">replica recommendation&lt;/a> can help applications achieve this goal.&lt;/li>
 &lt;li>Application requests adjustment + scaling to cope with sudden traffic bursts: based on the request optimization, use HPA to cope with sudden traffic bursts, and reduce Request to the daily average peak line. At this time, the target utilization rate of HPA is low, only for coping with sudden traffic, and autoscaling does not occur most of the time. &lt;a href="/docs/tutorials/recommendation/hpa-recommendation">HPA recommendation&lt;/a> can scan out applications suitable for elasticity and provide HPA configuration.&lt;/li>
 &lt;li>Application requests adjustment + scaling to cope with daily traffic changes: based on the request optimization, use HPA to cope with daily traffic and reduce Request to the average. At this time, the target utilization rate of HPA is equal to the average utilization rate of the application. &lt;a href="/docs/tutorials/using-effective-hpa-to-scaling-with-effectiveness">EHPA&lt;/a> provide prediction-based horizontal elasticity, helping more applications achieve intelligent elasticity.&lt;/li>
-&lt;/ol></description></item><item><title>Docs: Time Series Forecast Algorithm-DSP</title><link>/docs/core-concept/timeseriees-forecasting-by-dsp/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>/docs/core-concept/timeseriees-forecasting-by-dsp/</guid><description>
+&lt;/ol></description></item><item><title>Docs: Time Series Forecast Algorithm-DSP</title><link>/docs/core-concept/timeseries-forecasting-by-dsp/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>/docs/core-concept/timeseries-forecasting-by-dsp/</guid><description>
 &lt;p>Time series forecasting refers to using historical time series data to predict future values. Time series data typically consists of time and corresponding values, such as resource usage, stock prices, or temperature. DSP (Digital Signal Processing) is a digital signal processing technique that can be used for analyzing and processing time series data.&lt;/p>
 &lt;p>Discrete Fourier Transform (DFT) is a commonly used algorithm in the field of DSP. DFT is a technique that transforms time domain signals into frequency domain signals. By decomposing time domain signals into different frequency components, the characteristics and structures of the signals can be better understood and analyzed. In time series forecasting, DFT can be used to analyze and predict the periodicity and trend of signals, thereby improving the accuracy of forecasts.&lt;/p>
 &lt;p>Crane uses commonly used techniques in the field of Digital Signal Processing (DSP), such as &lt;code>Discrete Fourier Transform (DFT)&lt;/code> and &lt;code>autocorrelation function&lt;/code>, to identify and predict periodic time series.&lt;/p>
@@ -31,7 +31,7 @@
 &lt;h3 id="preprocessing">Preprocessing&lt;/h3>
 &lt;h4 id="data-imputation">Data imputation&lt;/h4>
 &lt;p>It is common for monitoring data to be missing at certain time points, and Crane will fill in the missing sampling points based on the surrounding data. The method is as follows:&lt;/p>
-&lt;p>Assume that the sampling data between the m-th and n-th sampling points are missing (m+1&amp;lt;n). Let the sampling values at points m-th and n-th be $v_m$ and $v_n$. Then, let $$\Delta = {v_n - v_m \over n-m}$$, the missing data between m-th and n-th are $v_m+\Delta , v_m+2\Delta , &amp;hellip;$&lt;/p>
+&lt;p>Assume that the sampling data between the m-th and n-th sampling points are missing (m+1&amp;lt;n). Let the sampling values at points m-th and n-th be \(v_m\) and \(v_n\). Then, let $$\Delta = {v_n - v_m \over n-m}$$, the missing data between m-th and n-th are $$v_m+\Delta , v_m+2\Delta , &amp;hellip;$$&lt;/p>
 &lt;p>&lt;img src="/images/algorithm/dsp/missing_data_fill.png" alt="">&lt;/p>
 &lt;h4 id="remove-outliers">Remove outliers&lt;/h4>
 &lt;p>Occasionally, there may be some extreme outlier data points in the monitoring data, and there are many reasons for these outliers, such as:&lt;/p>
@@ -41,18 +41,18 @@
 &lt;li>The application consumes resources far beyond normal operation when starting up.&lt;/li>
 &lt;/ol>
 &lt;p>These extreme outlier points will interfere with the periodic judgment of the signal and need to be removed. try as follows:&lt;/p>
-&lt;p>Select the $P99.9$ and $P0.1$ of all sampling points in the actual sequence as the upper and lower threshold values, respectively. If a sampling value is lower than the lower limit or higher than the upper limit, set the value of the sampling point to the previous sampling value.&lt;/p>
+&lt;p>Select the \(P99.9\) and \(P0.1\) of all sampling points in the actual sequence as the upper and lower threshold values, respectively. If a sampling value is lower than the lower limit or higher than the upper limit, set the value of the sampling point to the previous sampling value.&lt;/p>
 &lt;p>&lt;img src="/images/algorithm/dsp/remove_outliers.png" alt="">&lt;/p>
 &lt;h4 id="discrete-fourier-transform">Discrete Fourier Transform&lt;/h4>
-&lt;p>Performing a fast discrete Fourier transform (FFT) on the monitored time series (assuming a length of $N$) generates a spectrogram that intuitively displays the signal&amp;rsquo;s frequency spectrum as &amp;ldquo;impulses&amp;rdquo; at various discrete points $k$.
-The vertical height of each impulse represents the &amp;ldquo;amplitude&amp;rdquo; of the periodic component corresponding to $k$, where $k$ takes values in the range $(0,1,2, &amp;hellip; N-1)$.&lt;/p>
-&lt;p>$k = 0$ corresponds to the &amp;ldquo;DC component&amp;rdquo; of the signal, which has no effect on the signal&amp;rsquo;s periodicity and can be ignored.&lt;/p>
-&lt;p>Due to the conjugate symmetry of the first half and second half of the frequency spectrum sequence after the discrete Fourier transform, the graph is symmetric about the axis and only the first half $N/2$ needs to be considered.&lt;/p>
-&lt;p>The period corresponding to $k$ is $$T = {N \over k} \bullet SampleInterval$$&lt;/p>
-&lt;p>To determine whether a signal has a period $T$, it is necessary to observe at least double of length $T$. Therefore, the maximum period that can be identified through a sequence of length $N$ is $N/2$. Thus, $k = 1$ can be ignored.&lt;/p>
-&lt;p>Therefore, the range of values for $k$ is $(2, 3, &amp;hellip; , N/2)$, corresponding to periods of $N/2, N/3, &amp;hellip;$ This is the &amp;ldquo;resolution&amp;rdquo; of period information that FFT can provide. If a signal&amp;rsquo;s period does not fall on $N/k$, it will be spread over the entire frequency domain, leading to &amp;ldquo;frequency leakage.&amp;rdquo;&lt;/p>
+&lt;p>Performing a fast discrete Fourier transform (FFT) on the monitored time series (assuming a length of \(N\)) generates a spectrogram that intuitively displays the signal&amp;rsquo;s frequency spectrum as &amp;ldquo;impulses&amp;rdquo; at various discrete points \(k\).
+The vertical height of each impulse represents the &amp;ldquo;amplitude&amp;rdquo; of the periodic component corresponding to \(k\), where \(k\) takes values in the range \((0,1,2, &amp;hellip; N-1)\).&lt;/p>
+&lt;p>\(k = 0\) corresponds to the &amp;ldquo;DC component&amp;rdquo; of the signal, which has no effect on the signal&amp;rsquo;s periodicity and can be ignored.&lt;/p>
+&lt;p>Due to the conjugate symmetry of the first half and second half of the frequency spectrum sequence after the discrete Fourier transform, the graph is symmetric about the axis and only the first half \(N/2\) needs to be considered.&lt;/p>
+&lt;p>The period corresponding to \(k\) is $$T = {N \over k} \bullet SampleInterval$$&lt;/p>
+&lt;p>To determine whether a signal has a period \(T\), it is necessary to observe at least double of length \(T\). Therefore, the maximum period that can be identified through a sequence of length \(N\) is \(N/2\). Thus, \(k = 1\) can be ignored.&lt;/p>
+&lt;p>Therefore, the range of values for \(k\) is \((2, 3, &amp;hellip; , N/2)\), corresponding to periods of \(N/2, N/3, &amp;hellip;\) This is the &amp;ldquo;resolution&amp;rdquo; of period information that FFT can provide. If a signal&amp;rsquo;s period does not fall on \(N/k\), it will be spread over the entire frequency domain, leading to &amp;ldquo;frequency leakage.&amp;rdquo;&lt;/p>
 &lt;p>Fortunately, in actual production environments, the applications we usually encounter (especially online services) have regular cycles, often on a &amp;ldquo;daily&amp;rdquo; basis. Certain businesses may exhibit a &amp;ldquo;weekend effect,&amp;rdquo; where behavior on weekends differs from that on weekdays. However, when observed at the &amp;ldquo;weekly&amp;rdquo; level, they still exhibit good periodicity.&lt;/p>
-&lt;p>Crane does not attempt to discover periodicity of arbitrary lengths, but instead specifies several fixed cycle lengths（$1d、7d$）for detection. The sequence length $N$ is ensured to be a multiple of the target detection period $T$ by trimming or padding the sequence, for example: $T=1d，N=3d；T=7d，N=14d$.&lt;/p>
+&lt;p>Crane does not attempt to discover periodicity of arbitrary lengths, but instead specifies several fixed cycle lengths (\(1d、7d\))for detection. The sequence length \(N\) is ensured to be a multiple of the target detection period \(T\) by trimming or padding the sequence, for example: $$T=1d，N=3d；T=7d，N=14d$$.&lt;/p>
 &lt;p>We have collected some monitoring indicators for applications from production environments and saved them in CSV format under the &lt;code>pkg/prediction/dsp/test_data&lt;/code> directory.&lt;/p>
 &lt;p>For example, the &lt;code>input0.csv&lt;/code> file contains 8 days of CPU monitoring data for an application, with the corresponding time series shown in the following graph:
 &lt;img src="/images/algorithm/dsp/input0.png" alt="">&lt;/p>
@@ -63,34 +63,34 @@ The vertical height of each impulse represents the &amp;ldquo;amplitude&amp;rdqu
 &lt;p>The previous explanation was based on our intuitive judgement, how does Crane select its &amp;ldquo;candidate periods&amp;rdquo;?&lt;/p>
 &lt;ol>
 &lt;li>
-&lt;p>Performing a random permutation of the original sequence $\vec x(n)$ results in the sequence $\vec x&amp;rsquo;(n)$. Applying the FFT to $\vec x&amp;rsquo;(n)$ yields $\vec X&amp;rsquo;(k)$, let $P_{max} = argmax|\vec X&amp;rsquo;(k)|$.&lt;/p>
+&lt;p>Performing a random permutation of the original sequence \(\vec x(n)\) results in the sequence \(\vec x&amp;rsquo;(n)\). Applying the FFT to \(\vec x&amp;rsquo;(n)\) yields \(\vec X&amp;rsquo;(k)\), let \(P_{max} = argmax|\vec X&amp;rsquo;(k)|\).&lt;/p>
 &lt;/li>
 &lt;li>
-&lt;p>Repeat the above operation 100 times to obtain 100 values of $P_{max}$, then set $P_{threshold}$=$P99$.&lt;/p>
+&lt;p>Repeat the above operation 100 times to obtain 100 values of \(P_{max}\), then set \(P_{threshold}\)=\(P99\).&lt;/p>
 &lt;/li>
 &lt;li>
-&lt;p>Compute the FFT of the original sequence $\vec x(n)$ to obtain $\vec X(f)$. Traverse $k = 2, 3, &amp;hellip;$, and if $P_k = |X(k)| &amp;gt; P_{threshold}$, then add $k$ to the list of candidate periods.&lt;/p>
+&lt;p>Compute the FFT of the original sequence \(\vec x(n)\) to obtain \(\vec X(f)\). Traverse \(k = 2, 3, &amp;hellip;\), and if \(P_k = |X(k)| &amp;gt; P_{threshold}\), then add \(k\) to the list of candidate periods.&lt;/p>
 &lt;/li>
 &lt;/ol>
 &lt;h4 id="auto-correlation-function">Auto Correlation Function&lt;/h4>
 &lt;p>Auto Correlation Function (ACF) is the cross-correlation of a signal with itself at different time points. In simple terms, it is a function of the time lag between two observations that measures the similarity between them.&lt;/p>
-&lt;p>Crane uses circular autocorrelation function (Circular ACF), which first extends the time series of length $N$ by using $N$ as the period. This means that the sequence $\vec x(n)$ is copied over the interval $&amp;hellip;, [-N, -1], [N, 2N-1], &amp;hellip;$, resulting in a new sequence $\vec x&amp;rsquo;(n)$ that is used for analysis.&lt;/p>
-&lt;p>The correlation coefficient between $\vec x&amp;rsquo;(n+k)$ and $\vec x&amp;rsquo;(n)$ is computed for each shift $k=1,2,3,&amp;hellip;N/2$, where $\vec x&amp;rsquo;(n)$is shifted by k.
+&lt;p>Crane uses circular autocorrelation function (Circular ACF), which first extends the time series of length \(N\) by using \(N\) as the period. This means that the sequence \(\vec x(n)\) is copied over the interval \(&amp;hellip;, [-N, -1], [N, 2N-1], &amp;hellip;\), resulting in a new sequence \(\vec x&amp;rsquo;(n)\) that is used for analysis.&lt;/p>
+&lt;p>The correlation coefficient between \(\vec x&amp;rsquo;(n+k)\) and \(\vec x&amp;rsquo;(n)\) is computed for each shift \(k=1,2,3,&amp;hellip;N/2\), where \(\vec x&amp;rsquo;(n)\) is shifted by \(k\).
 $$r_k={\displaystyle\sum_{i=-k}^{N-k-1} (x_i-\mu)(x_{i+k}-\mu) \over \displaystyle\sum_{i=0}^{N-1} (x_i-\mu)^2}\ \ \ \mu: mean$$&lt;/p>
-&lt;p>Instead of directly computing the ACF using the definition mentioned above, Crane uses the following formula and performs two FFT operations to calculate the ACF in $O(nlogn)$ time.
+&lt;p>Instead of directly computing the ACF using the definition mentioned above, Crane uses the following formula and performs two FFT operations to calculate the ACF in \(O(nlogn)\) time.
 $$\vec r = IFFT(|FFT({\vec x - \mu \over \sigma})|^2)\ \ \ \mu: mean,\ \sigma: standard\ deviation$$&lt;/p>
-&lt;p>The ACF is represented graphically as shown below, where the x-axis represents the time lag $k$ and the y-axis represents the autocorrelation coefficient $r_k$, which reflects the degree of similarity between the shifted signal and the original signal.&lt;/p>
+&lt;p>The ACF is represented graphically as shown below, where the x-axis represents the time lag \(k\) and the y-axis represents the autocorrelation coefficient \(r_k\), which reflects the degree of similarity between the shifted signal and the original signal.&lt;/p>
 &lt;p>&lt;img src="/images/algorithm/dsp/acf.png" alt="">&lt;/p>
 &lt;p>Crane verifies if the autocorrelation coefficient at each candidate period is located at the &amp;ldquo;peak of the curve&amp;rdquo;. It selects the candidate period that corresponds to the highest peak as the primary cycle (fundamental period) of the entire time series and uses it for prediction.&lt;/p>
 &lt;p>How to determine the &amp;ldquo;peak of the curve&amp;rdquo;?&lt;/p>
 &lt;p>Crane selects a section of the curve on each side and performs linear regression separately. If the slope of the left and right lines after regression are greater than and less than zero respectively, then the point is considered to be at a &amp;ldquo;peak&amp;rdquo;.&lt;/p>
 &lt;p>&lt;img src="/images/algorithm/dsp/linear_regression.png" alt="">&lt;/p>
 &lt;h4 id="predict">Predict&lt;/h4>
-&lt;p>Based on the primary cycle obtained in the previous step, Crane provides two methods to fit (predict) the time series data for the next cycle.
-&lt;strong>maxValue&lt;/strong>&lt;/p>
-&lt;p>The first method is to select the maximum value at time $t$(e.g. 6:00 PM) for each of the past few cycles, and use it as the predicted value for the next cycle at time $t$&lt;/p>
-&lt;p>&lt;img src="/images/algorithm/dsp/max_value.png" alt="">
-&lt;strong>fft&lt;/strong>&lt;/p>
+&lt;p>Based on the primary cycle obtained in the previous step, Crane provides two methods to fit (predict) the time series data for the next cycle.&lt;/p>
+&lt;p>&lt;strong>maxValue&lt;/strong>&lt;/p>
+&lt;p>The first method is to select the maximum value at time \(t\)(e.g. 6:00 PM) for each of the past few cycles, and use it as the predicted value for the next cycle at time \(t\).&lt;/p>
+&lt;p>&lt;img src="/images/algorithm/dsp/max_value.png" alt="">&lt;/p>
+&lt;p>&lt;strong>fft&lt;/strong>&lt;/p>
 &lt;p>The second method is to perform FFT on the original time series to obtain a frequency spectrum sequence, remove the &amp;ldquo;high-frequency noise&amp;rdquo;, and then perform IFFT (inverse fast Fourier transform). The resulting time series is used as the predicted result for the next cycle.&lt;/p>
 &lt;h2 id="applicate">Applicate&lt;/h2>
 &lt;p>Crane provides TimeSeriesPrediction as a CRD, allowing users to predict various time series data, such as CPU utilization rates of the workload, application QPS, and so on.&lt;/p>
@@ -117,8 +117,6 @@ $$\vec r = IFFT(|FFT({\vec x - \mu \over \sigma})|^2)\ \ \ \mu: mean,\ \sigma: s
 &lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">sampleInterval&lt;/span>: &lt;span style="color:#e6db74">&amp;#34;60s&amp;#34;&lt;/span> &lt;span style="color:#75715e"># The sampling interval for monitoring data is 1 minute.&lt;/span>
 &lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">historyLength&lt;/span>: &lt;span style="color:#e6db74">&amp;#34;15d&amp;#34;&lt;/span> &lt;span style="color:#75715e"># Pull the monitoring metrics from the past 15 days as the basis for prediction&lt;/span>
 &lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">estimators&lt;/span>: &lt;span style="color:#75715e"># Specify the prediction method, including maxValue and fft. Multiple estimators with different configurations can be specified for each method, and Crane will select the one with the highest fitting degree to generate the prediction results. If not specified, fft will be used by default&lt;/span>
-&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e"># maxValue:&lt;/span>
-&lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span>&lt;span style="color:#75715e"># - marginFraction: &amp;#34;0.1&amp;#34;&lt;/span>
 &lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">fft&lt;/span>:
 &lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> - &lt;span style="color:#f92672">marginFraction&lt;/span>: &lt;span style="color:#e6db74">&amp;#34;0.2&amp;#34;&lt;/span>
 &lt;/span>&lt;/span>&lt;span style="display:flex;">&lt;span> &lt;span style="color:#f92672">lowAmplitudeThreshold&lt;/span>: &lt;span style="color:#e6db74">&amp;#34;1.0&amp;#34;&lt;/span>
@@ -135,7 +133,7 @@ $$\vec r = IFFT(|FFT({\vec x - \mu \over \sigma})|^2)\ \ \ \mu: mean,\ \sigma: s
 &lt;p>&lt;code>minNumOfSpectrumItems&lt;/code>: The minimum number of frequency components to be retained.&lt;/p>
 &lt;p>&lt;code>maxNumOfSpectrumItems&lt;/code>：The maximum number of frequency components to be retained.&lt;/p>
 &lt;p>In simple terms, the fewer frequency components retained, the lower the upper frequency limit, and the higher the spectral amplitude lower limit, the smoother the predicted curve will be, but some details will be lost. Conversely, more detailed features are preserved with more frequency components retained, resulting in a more jagged curve.&lt;/p>
-&lt;p>Below are two predicted curves for the same time period. The blue and green lines have different highFrequencyThreshold values of $0.01$ and $0.001$, respectively. The blue curve filters out more high frequency components, resulting in a smoother curve.&lt;/p>
+&lt;p>Below are two predicted curves for the same time period. The blue and green lines have different highFrequencyThreshold values of \(0.01\) and \(0.001\), respectively. The blue curve filters out more high frequency components, resulting in a smoother curve.&lt;/p>
 &lt;p>&lt;img src="/images/algorithm/dsp/lft_0_001.png" alt=""> &lt;img src="/images/algorithm/dsp/lft_0_01.png" alt="">&lt;/p>
 &lt;p>There is no single parameter configuration that is suitable for all time series. Usually, it is necessary to adjust the algorithm parameters according to the characteristics of the application indicators in order to obtain the best prediction results.
 Crane provides a web interface that allows users to intuitively see the prediction results after adjusting the parameters. The steps are as follows:&lt;/p>
